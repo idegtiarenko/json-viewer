@@ -7,7 +7,6 @@ import com.github.idegtiarenko.json.ui.components.MutableObservableValue;
 import com.github.idegtiarenko.json.ui.components.ProgressAndLabel;
 import javafx.application.Application;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
@@ -118,13 +117,14 @@ public class JsonViewer extends Application {
         HBox.setHgrow(tree, Priority.ALWAYS);
         tree.setColumnResizePolicy(CONSTRAINED_RESIZE_POLICY);
         tree.getColumns().addAll(
-                createTextColumn("name", Node::getName),
-                createLabeledProgressBarColumn("children", node -> {
+                createColumn("name", 0.45, Node::getName),
+                createColumn("direct" + System.lineSeparator() + "children", 0.15, Node::getChildrenCount),
+                createLabeledProgressBarColumn("recursive" + System.lineSeparator() + "children", 0.2, node -> {
                     var totalSize = state.getValue().node().getRecursiveChildrenCount();
                     var currentSize = node.getRecursiveChildrenCount();
                     return new ProgressAndLabel(currentSize, totalSize, Integer.toString(currentSize));
                 }),
-                createLabeledProgressBarColumn("size", node -> {
+                createLabeledProgressBarColumn("size", 0.2, node -> {
                     var totalSize = state.getValue().node().getSize();
                     var currentSize = node.getSize();
                     return new ProgressAndLabel(currentSize, totalSize, sizeToString(currentSize));
@@ -146,19 +146,21 @@ public class JsonViewer extends Application {
         return new JsonViewerComponents(tree, path, preview);
     }
 
-    private TreeTableColumn<Node, String> createTextColumn(String name, Function<Node, String> extractor) {
-        TreeTableColumn<Node, String> column = new TreeTableColumn<>(name);
-        column.setCellValueFactory(param -> new SimpleStringProperty(extractor.apply(param.getValue().getValue())));
+    private <T> TreeTableColumn<Node, T> createColumn(String name, double widthRatio, Function<Node, T> extractor) {
+        TreeTableColumn<Node, T> column = new TreeTableColumn<>(name);
+        column.setCellValueFactory(param -> new SimpleObjectProperty<>(extractor.apply(param.getValue().getValue())));
+        column.setMaxWidth(widthRatio * Integer.MAX_VALUE);
         return column;
     }
 
-    private TreeTableColumn<Node, ProgressAndLabel> createLabeledProgressBarColumn(String name, Function<Node, ProgressAndLabel> extractor) {
+    private TreeTableColumn<Node, ProgressAndLabel> createLabeledProgressBarColumn(String name, double widthRatio, Function<Node, ProgressAndLabel> extractor) {
         var column = new TreeTableColumn<Node, ProgressAndLabel>(name);
         column.setCellValueFactory(param -> {
             var node = param.getValue().getValue();
             return new SimpleObjectProperty<>(extractor.apply(node));
         });
         column.setCellFactory(param -> new LabeledProgressBarTreeTableCell<>());
+        column.setMaxWidth(widthRatio * Integer.MAX_VALUE);
         return column;
     }
 
@@ -169,7 +171,6 @@ public class JsonViewer extends Application {
     }
 
     private Optional<File> getInitialFile() {
-        System.out.println("--->"+getParameters().getRaw());
         return getParameters().getRaw().stream().map(File::new).filter(File::exists).findFirst();
     }
 
