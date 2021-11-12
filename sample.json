@@ -1,0 +1,15 @@
+{
+  "string-field": "string",
+  "int-field": 0,
+  "float-field": 0.0,
+  "boolean-field": true,
+  "null-field": null,
+  "array-field": [
+    0,
+    1,
+    2
+  ],
+  "object-field": {
+    "key": "value"
+  }
+}
