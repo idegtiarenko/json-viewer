@@ -2,6 +2,7 @@ package com.github.idegtiarenko.json.ui;
 
 import com.github.idegtiarenko.json.Json;
 import com.github.idegtiarenko.json.Node;
+import com.github.idegtiarenko.json.ui.components.BackgroundTaskExecutor;
 import com.github.idegtiarenko.json.ui.components.LabeledProgressBarTreeTableCell;
 import com.github.idegtiarenko.json.ui.components.MutableObservableValue;
 import com.github.idegtiarenko.json.ui.components.ProgressAndLabel;
@@ -18,20 +19,19 @@ import javafx.scene.control.SplitPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableView;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-import lombok.RequiredArgsConstructor;
 
 import java.io.File;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.IntConsumer;
 
 import static com.github.idegtiarenko.json.FileSystem.sizeToString;
-import static java.util.Optional.ofNullable;
+import static com.github.idegtiarenko.json.ui.components.NodeUtils.fillHeight;
+import static com.github.idegtiarenko.json.ui.components.NodeUtils.fillWidth;
 import static javafx.scene.control.TreeTableView.CONSTRAINED_RESIZE_POLICY;
 
 public class JsonViewer extends Application {
@@ -46,34 +46,25 @@ public class JsonViewer extends Application {
     public void start(Stage stage) {
 
         var state = new MutableObservableValue<JsonViewerState>();
-
-        var components = createJsonViewComponents(state);
+        var executor = new BackgroundTaskExecutor();
 
         var root = new VBox(
-                createMenu(stage, state),
-                components.path,
-                createSplitPane(components.tree, components.preview)
+                createMenu(stage, state, executor),
+                createJsonViewer(state),
+                executor.getLabeledProgressBar()
         );
 
-        Scene scene = new Scene(root);
-
         stage.setTitle(APP_NAME);
-        stage.setScene(scene);
+        stage.setScene(new Scene(root));
         stage.show();
 
-        state.setOptionalValue(getInitialFile().map(JsonViewerState::from));
+        getInitialFile().ifPresent(file -> openFile(state, executor, file));
     }
 
-    private MenuBar createMenu(Stage stage, MutableObservableValue<JsonViewerState> state) {
+    private MenuBar createMenu(Stage stage, MutableObservableValue<JsonViewerState> state, BackgroundTaskExecutor executor) {
 
         var open = new MenuItem("Open");
-        open.setOnAction(event -> {
-            try {
-                state.setOptionalValue(ofNullable(new FileChooser().showOpenDialog(stage)).map(JsonViewerState::from));
-            } catch (Exception e) {
-                showErrorDialogFor(e);
-            }
-        });
+        open.setOnAction(event -> openFile(state, executor, new FileChooser().showOpenDialog(stage)));
         var close = new MenuItem("Close");
         close.setOnAction(event -> state.reset());
 
@@ -87,6 +78,36 @@ public class JsonViewer extends Application {
                 new Menu("File", null, open, close, new SeparatorMenuItem(), exit),
                 new Menu("Help", null, about)
         );
+    }
+
+    private void openFile(MutableObservableValue<JsonViewerState> state, BackgroundTaskExecutor backgroundTaskExecutor, File file) {
+        backgroundTaskExecutor.submit(new BackgroundTaskExecutor.Task<JsonViewerState>() {
+            @Override
+            public String getName() {
+                return "Loading json file";
+            }
+
+            @Override
+            public int getTotalSize() {
+                return file != null ? (int) file.length() : 0;
+            }
+
+            @Override
+            public JsonViewerState execute(IntConsumer onProgress) {
+                return JsonViewerState.from(file, onProgress);
+            }
+
+            @Override
+            public void onSuccess(JsonViewerState result) {
+                state.setValue(result);
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                state.setValue(null);
+                showErrorDialogFor(e);
+            }
+        });
     }
 
     private void showErrorDialogFor(Exception e) {
@@ -105,16 +126,14 @@ public class JsonViewer extends Application {
         about.showAndWait();
     }
 
-    private JsonViewerComponents createJsonViewComponents(ObservableValue<JsonViewerState> state) {
+    private VBox createJsonViewer(ObservableValue<JsonViewerState> state) {
 
         var path = new Text();
 
-        var preview = new TextArea();
+        var preview = fillWidth(new TextArea());
         preview.setEditable(false);
-        HBox.setHgrow(preview, Priority.ALWAYS);
 
-        var tree = new TreeTableView<Node>();
-        HBox.setHgrow(tree, Priority.ALWAYS);
+        var tree = fillWidth(new TreeTableView<Node>());
         tree.setColumnResizePolicy(CONSTRAINED_RESIZE_POLICY);
         tree.getColumns().addAll(
                 createColumn("name", 0.45, Node::getName),
@@ -143,13 +162,16 @@ public class JsonViewer extends Application {
 
         state.addListener((observable, oldValue, newValue) -> tree.setRoot(newValue != null ? new JsonNodeTreeItem(newValue.node()) : null));
 
-        return new JsonViewerComponents(tree, path, preview);
+        return fillHeight(new VBox(
+                path,
+                fillHeight(new SplitPane(tree, preview))
+        ));
     }
 
     private <T> TreeTableColumn<Node, T> createColumn(String name, double widthRatio, Function<Node, T> extractor) {
         TreeTableColumn<Node, T> column = new TreeTableColumn<>(name);
         column.setCellValueFactory(param -> new SimpleObjectProperty<>(extractor.apply(param.getValue().getValue())));
-        column.setMaxWidth(widthRatio * Integer.MAX_VALUE);
+        column.setMaxWidth(widthRatio * Double.MAX_VALUE);
         return column;
     }
 
@@ -160,24 +182,11 @@ public class JsonViewer extends Application {
             return new SimpleObjectProperty<>(extractor.apply(node));
         });
         column.setCellFactory(param -> new LabeledProgressBarTreeTableCell<>());
-        column.setMaxWidth(widthRatio * Integer.MAX_VALUE);
+        column.setMaxWidth(widthRatio * Double.MAX_VALUE);
         return column;
-    }
-
-    private SplitPane createSplitPane(javafx.scene.Node a, javafx.scene.Node b) {
-        var split = new SplitPane(a, b);
-        VBox.setVgrow(split, Priority.ALWAYS);
-        return split;
     }
 
     private Optional<File> getInitialFile() {
         return getParameters().getRaw().stream().map(File::new).filter(File::exists).findFirst();
-    }
-
-    @RequiredArgsConstructor
-    private static class JsonViewerComponents {
-        private final TreeTableView<Node> tree;
-        private final Text path;
-        private final TextArea preview;
     }
 }

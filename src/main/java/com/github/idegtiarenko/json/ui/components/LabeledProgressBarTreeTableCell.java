@@ -2,14 +2,15 @@ package com.github.idegtiarenko.json.ui.components;
 
 import javafx.scene.control.TreeTableCell;
 
+import static com.github.idegtiarenko.json.ui.components.NodeUtils.useAllWidth;
+
 public class LabeledProgressBarTreeTableCell<S> extends TreeTableCell<S, ProgressAndLabel> {
 
     private final LabeledProgressBar labeledProgressBar;
 
     public LabeledProgressBarTreeTableCell() {
         this.getStyleClass().add("progress-bar-tree-table-cell");
-        this.labeledProgressBar = new LabeledProgressBar();
-        this.labeledProgressBar.setMaxWidth(Double.MAX_VALUE);
+        this.labeledProgressBar = useAllWidth(new LabeledProgressBar());
     }
 
     @Override

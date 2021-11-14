@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
+import java.util.function.IntConsumer;
 
 import static com.fasterxml.jackson.core.JsonToken.VALUE_FALSE;
 import static com.fasterxml.jackson.core.JsonToken.VALUE_NULL;
@@ -21,30 +22,31 @@ public class Json {
 
     public static Node parse(String json) {
         try {
-            return parse(new JsonFactory().createParser(json));
+            return parse(new JsonFactory().createParser(json), p -> {});
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
     }
 
-    public static Node parse(File file) {
+    public static Node parse(File file, IntConsumer onProgress) {
         try {
-            return parse(new JsonFactory().createParser(file));
+            return parse(new JsonFactory().createParser(file), onProgress);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
     }
 
-    public static Node parse(JsonParser parser) throws IOException {
+    public static Node parse(JsonParser parser, IntConsumer onProgress) throws IOException {
         parser.nextToken();
-        return readValue(parser, "");
+        return readValue(parser, "", onProgress);
     }
 
-    private static Node readValue(JsonParser parser, String name) throws IOException {
+    private static Node readValue(JsonParser parser, String name, IntConsumer onProgress) throws IOException {
+        onProgress.accept(getLocation(parser));
         var token = parser.currentToken();
         return switch (token) {
-            case START_OBJECT -> readObject(parser, name);
-            case START_ARRAY -> readArray(parser, name);
+            case START_OBJECT -> readObject(parser, name, onProgress);
+            case START_ARRAY -> readArray(parser, name, onProgress);
             case VALUE_STRING -> readString(parser, name);
             case VALUE_NUMBER_INT -> readTokenValue(parser, name, VALUE_NUMBER_INT);
             case VALUE_NUMBER_FLOAT -> readTokenValue(parser, name, VALUE_NUMBER_FLOAT);
@@ -55,7 +57,7 @@ public class Json {
         };
     }
 
-    private static Node readObject(JsonParser parser, String name) throws IOException {
+    private static Node readObject(JsonParser parser, String name, IntConsumer onProgress) throws IOException {
         assert parser.currentToken() == JsonToken.START_OBJECT;
         var from = getLocation(parser);
         var fields = new ArrayList<Node>();
@@ -66,14 +68,14 @@ public class Json {
             } else if (next == JsonToken.FIELD_NAME) {
                 //skip
             } else {
-                fields.add(readValue(parser, parser.getCurrentName()));
+                fields.add(readValue(parser, parser.getCurrentName(), onProgress));
             }
         }
         var to = getLocation(parser) + 1;
         return new ObjectNode(name, from, to, fields);
     }
 
-    private static Node readArray(JsonParser parser, String name) throws IOException {
+    private static Node readArray(JsonParser parser, String name, IntConsumer onProgress) throws IOException {
         assert parser.currentToken() == JsonToken.START_ARRAY;
         var from = getLocation(parser);
         var items = new ArrayList<Node>();
@@ -83,7 +85,7 @@ public class Json {
             if (next == JsonToken.END_ARRAY) {
                 break;
             } else {
-                items.add(readValue(parser, Integer.toString(index)));
+                items.add(readValue(parser, Integer.toString(index), onProgress));
                 index++;
             }
         }

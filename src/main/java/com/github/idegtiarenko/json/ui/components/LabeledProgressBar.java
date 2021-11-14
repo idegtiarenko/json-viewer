@@ -4,15 +4,16 @@ import javafx.scene.control.ProgressBar;
 import javafx.scene.layout.StackPane;
 import javafx.scene.text.Text;
 
+import static com.github.idegtiarenko.json.ui.components.NodeUtils.useAllWidth;
+
 public class LabeledProgressBar extends StackPane {
 
     private final ProgressBar progressBar;
     private final Text text;
 
     public LabeledProgressBar() {
-        this.progressBar = new ProgressBar();
+        this.progressBar = useAllWidth(new ProgressBar());
         this.text = new Text();
-        progressBar.setMaxWidth(Double.MAX_VALUE);
         getChildren().addAll(progressBar, text);
     }
 
