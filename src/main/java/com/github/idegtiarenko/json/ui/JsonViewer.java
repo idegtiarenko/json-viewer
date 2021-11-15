@@ -46,10 +46,11 @@ public class JsonViewer extends Application {
     public void start(Stage stage) {
 
         var state = new MutableObservableValue<JsonViewerState>();
+        var fileChooser = new FileChooser();
         var executor = new BackgroundTaskExecutor();
 
         var root = new VBox(
-                createMenu(stage, state, executor),
+                createMenu(stage, state, fileChooser, executor),
                 createJsonViewer(state),
                 executor.getLabeledProgressBar()
         );
@@ -61,10 +62,21 @@ public class JsonViewer extends Application {
         getInitialFile().ifPresent(file -> openFile(state, executor, file));
     }
 
-    private MenuBar createMenu(Stage stage, MutableObservableValue<JsonViewerState> state, BackgroundTaskExecutor executor) {
+    private MenuBar createMenu(
+            Stage stage,
+            MutableObservableValue<JsonViewerState> state,
+            FileChooser fileChooser,
+            BackgroundTaskExecutor executor
+    ) {
 
         var open = new MenuItem("Open");
-        open.setOnAction(event -> openFile(state, executor, new FileChooser().showOpenDialog(stage)));
+        open.setOnAction(event -> {
+            var file = fileChooser.showOpenDialog(stage);
+            if (file != null) {
+                fileChooser.setInitialDirectory(file.getParentFile());
+            }
+            openFile(state, executor, file);
+        });
         var close = new MenuItem("Close");
         close.setOnAction(event -> state.reset());
 
