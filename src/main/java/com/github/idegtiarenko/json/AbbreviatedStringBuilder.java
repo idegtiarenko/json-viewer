@@ -10,30 +10,35 @@ public class AbbreviatedStringBuilder {
     }
 
     public AbbreviatedStringBuilder append(char c) {
-        if (!isLimitReached()) {
+        if (getRemaining() > 0) {
             sb.append(c);
         }
         return this;
     }
 
     public AbbreviatedStringBuilder append(String str) {
-        if (!isLimitReached()) {
+        var remaining = getRemaining();
+        if (remaining < str.length()) {
+            sb.append(str.substring(0, remaining));
+        } else {
             sb.append(str);
         }
         return this;
     }
 
-    public AbbreviatedStringBuilder append(Object... strs) {
-        if (!isLimitReached()) {
-            for (var str : strs) {
-                sb.append(str);
-            }
+    public AbbreviatedStringBuilder append(String... strs) {
+        for (String str : strs) {
+            append(str);
         }
         return this;
     }
 
     public boolean isLimitReached() {
         return sb.length() > limit;
+    }
+
+    public int getRemaining() {
+        return limit - sb.length();
     }
 
     @Override
