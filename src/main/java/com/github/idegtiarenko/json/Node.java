@@ -1,117 +1,46 @@
 package com.github.idegtiarenko.json;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
-
 import java.util.List;
 
-@RequiredArgsConstructor
-@Getter
-@EqualsAndHashCode
-@ToString
-public abstract class Node {
+public record Node(
+        Type type,
+        String name,
+        int from,
+        int to,
+        String value,
+        List<Node> children,
+        int recursiveChildrenCount
+) {
 
-    private final String name;
-    private final int from;
-    private final int to;
-
-    public int getSize() {
+    public int size() {
         return to - from;
     }
 
-    public abstract String getValue();
-
-    public abstract List<Node> getChildren();
-
-    public Node getChild(int i) {
-        return getChildren().get(i);
+    public int childrenCount() {
+        return children.size();
     }
 
-    public int getChildrenCount() {
-        return getChildren().size();
+    public Node child(int i) {
+        return children.get(i);
     }
 
-    public abstract int getRecursiveChildrenCount();
-}
-
-@EqualsAndHashCode(callSuper = true)
-@ToString
-final class ValueNode extends Node {
-    private final String value;
-
-    public ValueNode(String name, int from, int to, String value) {
-        super(name, from, to);
-        this.value = value;
+    public static Node value(String name, int from, int to, String value) {
+        return new Node(Type.VALUE, name, from, to, value, List.of(), 0);
     }
 
-    @Override
-    public String getValue() {
-        return value;
+    public static Node array(String name, int from, int to, List<Node> children) {
+        return new Node(Type.ARRAY, name, from, to, null, children, calculateRecursiveChildrenCount(children));
     }
 
-    @Override
-    public List<Node> getChildren() {
-        return List.of();
-    }
-
-    @Override
-    public int getRecursiveChildrenCount() {
-        return 0;
-    }
-}
-
-@EqualsAndHashCode(callSuper = true)
-@ToString(callSuper = true)
-abstract class ComplexNode extends Node {
-    private final List<Node> children;
-    private final int recursiveChildrenCount;
-
-    public ComplexNode(String name, int from, int to, List<Node> children) {
-        super(name, from, to);
-        this.children = children;
-        this.recursiveChildrenCount = calculateRecursiveChildrenCount(children);
-    }
-
-    @Override
-    public String getValue() {
-        return null;
-    }
-
-    @Override
-    public List<Node> getChildren() {
-        return children;
-    }
-
-    @Override
-    public int getRecursiveChildrenCount() {
-        return recursiveChildrenCount;
+    public static Node object(String name, int from, int to, List<Node> children) {
+        return new Node(Type.OBJECT, name, from, to, null, children, calculateRecursiveChildrenCount(children));
     }
 
     private static int calculateRecursiveChildrenCount(List<Node> children) {
-        var size = 0;
-        for (Node node : children) {
-            size += 1 + node.getRecursiveChildrenCount();
-        }
-        return size;
+        return children.stream().mapToInt(Node::recursiveChildrenCount).sum();
     }
-}
 
-@EqualsAndHashCode(callSuper = true)
-@ToString(callSuper = true)
-final class ObjectNode extends ComplexNode {
-
-    public ObjectNode(String name, int from, int to, List<Node> children) {
-        super(name, from, to, children);
-    }
-}
-
-@EqualsAndHashCode(callSuper = true)
-@ToString(callSuper = true)
-final class ArrayNode extends ComplexNode {
-
-    public ArrayNode(String name, int from, int to, List<Node> children) {
-        super(name, from, to, children);
+    public enum Type {
+        VALUE, ARRAY, OBJECT
     }
 }

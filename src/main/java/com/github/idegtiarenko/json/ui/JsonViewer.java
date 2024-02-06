@@ -32,7 +32,7 @@ import java.util.function.IntConsumer;
 import static com.github.idegtiarenko.json.FileSystem.sizeToString;
 import static com.github.idegtiarenko.json.ui.components.NodeUtils.fillHeight;
 import static com.github.idegtiarenko.json.ui.components.NodeUtils.fillWidth;
-import static javafx.scene.control.TreeTableView.CONSTRAINED_RESIZE_POLICY;
+import static javafx.scene.control.TreeTableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS;
 
 public class JsonViewer extends Application {
 
@@ -146,18 +146,18 @@ public class JsonViewer extends Application {
         preview.setEditable(false);
 
         var tree = fillWidth(new TreeTableView<Node>());
-        tree.setColumnResizePolicy(CONSTRAINED_RESIZE_POLICY);
+        tree.setColumnResizePolicy(CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
         tree.getColumns().addAll(
-                createColumn("name", 0.45, Node::getName),
-                createColumn("direct" + System.lineSeparator() + "children", 0.15, Node::getChildrenCount),
+                createColumn("name", 0.45, Node::name),
+                createColumn("direct" + System.lineSeparator() + "children", 0.15, Node::childrenCount),
                 createLabeledProgressBarColumn("recursive" + System.lineSeparator() + "children", 0.2, node -> {
-                    var totalSize = state.getValue().node().getRecursiveChildrenCount();
-                    var currentSize = node.getRecursiveChildrenCount();
+                    var totalSize = state.getValue().node().recursiveChildrenCount();
+                    var currentSize = node.recursiveChildrenCount();
                     return new ProgressAndLabel(currentSize, totalSize, Integer.toString(currentSize));
                 }),
                 createLabeledProgressBarColumn("size", 0.2, node -> {
-                    var totalSize = state.getValue().node().getSize();
-                    var currentSize = node.getSize();
+                    var totalSize = state.getValue().node().size();
+                    var currentSize = node.size();
                     return new ProgressAndLabel(currentSize, totalSize, sizeToString(currentSize));
                 })
         );

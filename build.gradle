@@ -1,7 +1,6 @@
 plugins {
     id 'application'
-    id 'org.openjfx.javafxplugin' version '0.0.10'//https://openjfx.io/openjfx-docs/#gradle
-    id 'org.beryx.jlink' version '2.24.1'
+    id 'org.openjfx.javafxplugin' version '0.1.0'//https://openjfx.io/openjfx-docs/#gradle
 }
 
 group 'com.github.idegtiarenko'
@@ -12,40 +11,21 @@ repositories {
 }
 
 javafx {
-    version = "17"
+    version = "21"
     modules = [ 'javafx.controls' ]
 }
 
 mainClassName = 'com.github.idegtiarenko.json.ui.JsonViewer'
 
-jlink {
-    launcher {
-        name = 'json-viewer'
-        jvmArgs += ['--enable-preview']
-    }
-}
-
-tasks.withType(JavaCompile).each {
-    it.options.compilerArgs += ['--enable-preview']
-}
-
-run {
-    jvmArgs += ['--enable-preview']
-}
-
 test {
-    jvmArgs += ['--enable-preview']
     useJUnitPlatform()
 }
 
 dependencies {
     //dist
-    implementation 'org.projectlombok:lombok:1.18.22'
-    annotationProcessor 'org.projectlombok:lombok:1.18.22'
-    implementation 'com.fasterxml.jackson.core:jackson-core:2.13.0'
+    implementation 'com.fasterxml.jackson.core:jackson-core:2.16.0'
     //tests
-    testImplementation 'org.assertj:assertj-core:3.21.0'
-    testImplementation 'org.mockito:mockito-core:4.0.0'
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+    testImplementation 'org.assertj:assertj-core:3.25.3'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.2'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.2'
 }

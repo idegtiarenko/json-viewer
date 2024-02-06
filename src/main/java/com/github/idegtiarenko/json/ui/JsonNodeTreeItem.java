@@ -16,14 +16,14 @@ public class JsonNodeTreeItem extends TreeItem<Node> {
 
     @Override
     public boolean isLeaf() {
-        return node.getChildren().isEmpty();
+        return node.children().isEmpty();
     }
 
     @Override
     public ObservableList<TreeItem<Node>> getChildren() {
         if (!initialized) {
             initialized = true;
-            super.getChildren().setAll(node.getChildren().stream().map(JsonNodeTreeItem::new).toList());
+            super.getChildren().setAll(node.children().stream().map(JsonNodeTreeItem::new).toList());
         }
         return super.getChildren();
     }

@@ -72,7 +72,7 @@ public class Json {
             }
         }
         var to = getLocation(parser) + 1;
-        return new ObjectNode(name, from, to, fields);
+        return Node.object(name, from, to, fields);
     }
 
     private static Node readArray(JsonParser parser, String name, IntConsumer onProgress) throws IOException {
@@ -90,21 +90,21 @@ public class Json {
             }
         }
         var to = getLocation(parser) + 1;
-        return new ArrayNode(name, from, to, items);
+        return Node.array(name, from, to, items);
     }
 
     private static Node readString(JsonParser parser, String name) throws IOException {
         assert parser.currentToken() == VALUE_STRING;
         var from = getLocation(parser) + 1;
         var to = from + parser.getTextLength();
-        return new ValueNode(name, from, to, "\"" + parser.getText() + "\"");
+        return Node.value(name, from, to, "\"" + parser.getText() + "\"");
     }
 
     private static Node readTokenValue(JsonParser parser, String name, JsonToken token) throws IOException {
         assert parser.currentToken() == token;
         var from = getLocation(parser);
         var to = from + parser.getTextLength();
-        return new ValueNode(name, from, to, parser.getText());
+        return Node.value(name, from, to, parser.getText());
     }
 
     private static int getLocation(JsonParser parser) {
@@ -124,15 +124,15 @@ public class Json {
 
     private static AbbreviatedStringBuilder appendJson(AbbreviatedStringBuilder builder, String ident, Node node) {
         if (!builder.isLimitReached()) {
-            switch (node) {
-                case ValueNode value -> builder.append(value.getValue());
-                case ObjectNode obj -> {
+            switch (node.type()) {
+                case VALUE -> builder.append(node.value());
+                case OBJECT -> {
                     var nestedIdent = ident + "  ";
                     builder.append("{", System.lineSeparator());
-                    var count = obj.getChildrenCount();
+                    var count = node.childrenCount();
                     for (int i = 0; i < count; i++) {
-                        builder.append(nestedIdent, "\"", obj.getChild(i).getName(), "\": ");
-                        appendJson(builder, nestedIdent, obj.getChild(i));
+                        builder.append(nestedIdent, "\"", node.child(i).name(), "\": ");
+                        appendJson(builder, nestedIdent, node.child(i));
                         if (i + 1 < count) {
                             builder.append(',');
                         }
@@ -140,13 +140,13 @@ public class Json {
                     }
                     builder.append(ident, "}");
                 }
-                case ArrayNode arr -> {
+                case ARRAY -> {
                     var nestedIdent = ident + "  ";
                     builder.append("[", System.lineSeparator());
-                    var count = arr.getChildrenCount();
+                    var count = node.childrenCount();
                     for (int i = 0; i < count; i++) {
                         builder.append(nestedIdent);
-                        appendJson(builder, nestedIdent, arr.getChild(i));
+                        appendJson(builder, nestedIdent, node.child(i));
                         if (i + 1 < count) {
                             builder.append(',');
                         }
@@ -168,6 +168,6 @@ public class Json {
         if (item.getParent() != null) {
             appendPath(builder, item.getParent()).append(" > ");
         }
-        return builder.append(item.getValue().getName());
+        return builder.append(item.getValue().name());
     }
 }
